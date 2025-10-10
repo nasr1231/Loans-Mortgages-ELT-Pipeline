@@ -1,5 +1,5 @@
-# Create Borrower Dimension Table
-CREATE TABLE IF NOT EXISTS Dim_Borrowers (
+/* Create Borrower Dimension Table */
+CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Borrowers (
     Borrowers_id_sk BIGINT,
     Borrowers_id_bk BIGINT,
     Emp_title STRING,
@@ -12,53 +12,58 @@ CREATE TABLE IF NOT EXISTS Dim_Borrowers (
     Application_type STRING,
     insert_date TIMESTAMP
 )
-STORED AS PARQUET;
+STORED AS PARQUET
+LOCATION '/dwh_financial_loans/external/Dim_Borrowers';
 
-CREATE TABLE IF NOT EXISTS Dim_Credit_Grade (
+CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Credit_Grade (
     Credit_grade_sk BIGINT,
     Grade STRING,
-    Subgrade STRING,
+    Sub_grade STRING,
     insert_date TIMESTAMP
 )
-STORED AS PARQUET;
+STORED AS PARQUET
+LOCATION '/dwh_financial_loans/external/Dim_Credit_Grade';
 
 
-# Create Loan Dimension Table
-CREATE TABLE IF NOT EXISTS Dim_Loan_Term (
+/* Create Loan Dimension Table */
+CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Loan_Term (
     Loan_Term_sk BIGINT,
     Period STRING,
     Term_description STRING,
     insert_date TIMESTAMP
 )
-STORED AS PARQUET;
+STORED AS PARQUET
+LOCATION '/dwh_financial_loans/external/Dim_Loan_Term';
 
 
-# Create Status Dimension Table
-CREATE TABLE IF NOT EXISTS Dim_Status (
+/* Create Status Dimension Table */
+CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Status (
     Status_id_sk BIGINT,
     Status_id BIGINT,
     Loan_status STRING,
     Loan_status_category STRING,
     insert_date TIMESTAMP
 )
-STORED AS PARQUET;
+STORED AS PARQUET
+LOCATION '/dwh_financial_loans/external/Dim_Status';
 
 
-# Create Date Dimension Table
-CREATE TABLE IF NOT EXISTS Dim_Date (
+/* Create Date Dimension Table */
+CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Date (
     Date_key BIGINT,
-    Date STRING,
+    `Date` DATE,
     Year INT,
     Month INT,
     Month_name STRING,
     Quarter INT,
     insert_date TIMESTAMP
 )
-STORED AS PARQUET;
+STORED AS PARQUET
+LOCATION '/dwh_financial_loans/external/Dim_Date';
 
 
-# Create Fact Table
-CREATE TABLE IF NOT EXISTS Fact_Loan (
+/* Create Fact Table*/
+CREATE EXTERNAL TABLE IF NOT EXISTS Fact_Loan (
     Loan_id_pk_sk BIGINT,
     Loan_id_bk BIGINT,
     Status_id_fk BIGINT,
@@ -77,5 +82,5 @@ CREATE TABLE IF NOT EXISTS Fact_Loan (
     Purpose STRING,
     insert_date TIMESTAMP
 )
-STORED AS PARQUET;
-
+STORED AS PARQUET
+LOCATION '/dwh_financial_loans/external/Fact_Loan';
