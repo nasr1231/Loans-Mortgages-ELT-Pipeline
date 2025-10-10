@@ -118,6 +118,7 @@ services:
       - ./configs/hive_server/hive_server_bashrc.txt:/root/.bashrc
       - ./configs/hive_server/sqoop-site.xml:/usr/lib/sqoop/conf/sqoop-site.xml
       - ./configs/hive_server/sshd_config.conf:/etc/ssh/sshd_config
+      - ./Scripts/Hive-DWH-DDL.sql:/etc
     environment:
       HIVE_CORE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hive-metastore/metastore"
       SERVICE_PRECONDITION: "hive-metastore:9083"
