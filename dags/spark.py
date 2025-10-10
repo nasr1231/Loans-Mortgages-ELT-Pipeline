@@ -120,7 +120,7 @@ dim_borrowers = dim_borrowers.select(
     "state_code",
     "total_account",
     "verification_status",
-    "application_type"
+    "application_type"  
 )
 
 ## Status Dimension Mapping FKs and BKs, Generating Surrogate Keys
@@ -191,32 +191,20 @@ df_dates = df_dates.withColumn("Year", year(col("Date"))) \
 # Reorder columns
 df_dates = df_dates.select("Date_key", "Date", "Year", "Month", "Month_name", "Quarter")
 
-df_dates.show(5)
 
-
-# الخطوة الأولى: تحويل أعمدة التاريخ وعمل الربط المبدئي مع جدول التواريخ
-# (هذه الجزئية من الكود الأصلي صحيحة، مع تعديل بسيط على الأسماء لتطابق الرسم)
-financial_df_with_dates = financial_df \
-    .withColumn("issue_date_dt", to_date(col("issue_date"), "yyyy-MM-dd")) \
-    .withColumn("last_payment_date_dt", to_date(col("last_payment_date"), "yyyy-MM-dd")) \
-    .withColumn("next_payment_date_dt", to_date(col("next_payment_date"), "yyyy-MM-dd")) \
-    .withColumn("last_credit_pull_date_dt", to_date(col("last_credit_pull_date"), "yyyy-MM-dd"))
-
-# الربط مع جدول التواريخ للحصول على المفاتيح الخاصة بكل تاريخ
-fact_loan_wip = financial_df_with_dates \
+fact_loan_wip = financial_df \
     .join(df_dates.alias("d_issue"), col("issue_date_dt") == col("d_issue.Date"), "left") \
     .join(df_dates.alias("d_last_pay"), col("last_payment_date_dt") == col("d_last_pay.Date"), "left") \
     .join(df_dates.alias("d_next_pay"), col("next_payment_date_dt") == col("d_next_pay.Date"), "left") \
     .join(df_dates.alias("d_credit_pull"), col("last_credit_pull_date_dt") == col("d_credit_pull.Date"), "left")
 
-# الخطوة الثانية: الربط مع باقي جداول الأبعاد للحصول على المفاتيح الاصطناعية (Surrogate Keys)
 fact_loan_wip = fact_loan_wip \
-    .join(dim_borrowers, financial_df_with_dates.member_id == dim_borrowers.borrowers_id_bk, "left") \
-    .join(dim_status, financial_df_with_dates.loan_status == dim_status.status_id, "left") \
-    .join(dim_credit_grade, financial_df_with_dates.sub_grade == dim_credit_grade.sub_grade, "left") \
-    .join(dim_loan_term, financial_df_with_dates.term == dim_loan_term.period, "left")
+    .join(dim_borrowers, fact_loan_wip.member_id == dim_borrowers.borrowers_id_bk, "left") \
+    .join(dim_status, fact_loan_wip.loan_status == dim_status.status_id, "left") \
+    .join(dim_credit_grade, fact_loan_wip.sub_grade == dim_credit_grade.sub_grade, "left") \
+    .join(dim_loan_term, fact_loan_wip.term == dim_loan_term.period, "left")
 
-# الخطوة الثالثة: اختيار الأعمدة النهائية وإنشاء المفتاح الأساسي لجدول الحقائق
+
 fact_loan = fact_loan_wip.select(
     # Business Key
     col("id").alias("loan_id_bk"),
@@ -231,7 +219,7 @@ fact_loan = fact_loan_wip.select(
     col("d_next_pay.Date_key").alias("date_key_next_payment"),
     col("d_credit_pull.Date_key").alias("last_credit_pull_date"),
     
-    # Measures (المقاييس الرقمية)
+    # Measures
     col("loan_amount"),
     col("dti").alias("DTI"),
     col("installment"),
@@ -260,37 +248,12 @@ fact_loan = fact_loan.select(
     "loan_purpose"
 )
 
+spark.sql("USE default")
 
-
-# spark.sql("USE default")
-# dim_borrowers.write \
-#     .mode("overwrite") \
-#     .format("parquet") \
-#     .saveAsTable("dim_borrowers")
-
-# dim_credit_grade.write \
-#     .mode("overwrite") \
-#     .format("parquet") \
-#     .saveAsTable("dim_credit_grade")
-
-# dim_status.write \
-#     .mode("overwrite") \
-#     .format("parquet") \
-#     .saveAsTable("dim_status")
-
-# dim_loan_term.write \
-#     .mode("overwrite") \
-#     .format("parquet") \
-#     .saveAsTable("dim_loan_term")
-
-# df_dates.write \
-#     .mode("overwrite") \
-#     .format("parquet") \
-#     .saveAsTable("dim_date")
-    
-# # Save fact_loan to Hive
-# fact_loan.write \
-#     .format("parquet") \
-#     .mode("overwrite") \
-#     .saveAsTable("fact_loan")
-    
+# Overwrite Hive tables Data to its Location automatically
+dim_borrowers.write.mode("overwrite").insertInto("Dim_Borrowers", overwrite=True)
+dim_credit_grade.write.mode("overwrite").insertInto("Dim_Credit_Grade", overwrite=True)
+dim_status.write.mode("overwrite").insertInto("Dim_Status", overwrite=True)
+dim_loan_term.write.mode("overwrite").insertInto("Dim_Loan_Term", overwrite=True)
+df_dates.write.mode("overwrite").insertInto("Dim_Date", overwrite=True)
+fact_loan.write.mode("overwrite").insertInto("Fact_Loan", overwrite=True)
