@@ -50,7 +50,7 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user1234@external_postgres_db:5432/airflow
     env_file:
-      - ./hadoop.env     
+      - ./hadoop.env
     depends_on:
       airflow-init:
         condition: service_healthy
@@ -118,7 +118,7 @@ services:
       - ./configs/hive_server/hive_server_bashrc.txt:/root/.bashrc
       - ./configs/hive_server/sqoop-site.xml:/usr/lib/sqoop/conf/sqoop-site.xml
       - ./configs/hive_server/sshd_config.conf:/etc/ssh/sshd_config
-      - ./Scripts/Hive-DWH-DDL.sql:/etc
+      - ./Scripts/Hive-DWH-DDL.sql:/etc/Hive-DWH-DDL.sql
     environment:
       HIVE_CORE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hive-metastore/metastore"
       SERVICE_PRECONDITION: "hive-metastore:9083"
@@ -220,6 +220,29 @@ services:
     depends_on:
       - external_postgres_db
 
+  #######################
+  # Metabase
+  #######################
+  metabase:
+    image: metabase/metabase:v0.48.7
+    container_name: ELT_Loan_metabase
+    restart: always
+    ports:
+      - "3001:3000"    # Metabase UI
+    environment:
+      - MB_DB_TYPE=postgres
+      - MB_DB_DBNAME=airflow
+      - MB_DB_PORT=5432
+      - MB_DB_USER=user
+      - MB_DB_PASS=user1234
+      - MB_DB_HOST=external_postgres_db
+    depends_on:
+      - external_postgres_db
+      - hive-server
+    volumes:
+      - ./drivers/hive:/plugins
+      - metabase_data:/metabase-data
+
 volumes:
   hadoop_namenode:
   hadoop_namenode_conda:
@@ -236,3 +259,4 @@ volumes:
   airflow_namenode:
   hive_metastore_db:
   nifi_data:
+  metabase_data:
