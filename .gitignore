@@ -1,0 +1,5 @@
+env
+configs/*
+hadoop.env
+hue-overrides.ini
+__pycache__
