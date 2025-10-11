@@ -1,3 +1,9 @@
+-- Create Database
+CREATE DATABASE IF NOT EXISTS Loans_DWH
+LOCATION '/dwh_financial_loans/external/Loans_DWH';
+
+USE Loans_DWH;
+
 /* Create Borrower Dimension Table */
 CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Borrowers (
     Borrowers_id_sk BIGINT,
