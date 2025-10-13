@@ -10,7 +10,7 @@ default_args = {
 
 @dag(
     dag_id="Loan_Analysis_ELT_Pipeline",
-    start_date=datetime(2025, 10, 8),
+    start_date=datetime.today() - timedelta(days=1),
     schedule_interval='@daily',
     catchup=False,
     default_args=default_args,
@@ -31,9 +31,9 @@ def Loans_ELT_Pipeline():
     spark_transform_data = BashOperator(
         task_id='transform_data',
         bash_command="""        
-            docker exec -i ELT_Loan_namenode bash -c 'spark-submit --master spark://namenode:7077 /root/airflow/dags/spark.py' 
-            echo "Data has been transformed and loaded into Data warehouse successfully!"
-            """
+        docker exec -i ELT_Loan_namenode bash -c 'spark-submit --master spark://namenode:7077 /root/airflow/dags/spark.py' 
+        echo "Data has been transformed and loaded into Data warehouse successfully!"
+        """
         )
         
     create_hive_tables >> spark_transform_data
