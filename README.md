@@ -517,18 +517,18 @@ Loans_ELT_Pipeline()
 
 ## 10-Explanation of Terms Used in the Report
 
-**MTD (Month-to-Date):** Refers to the cumulative total for the current month up to the current date.
+**`MTD (Month-to-Date):`** Refers to the cumulative total for the current month up to the current date.
 
-**MoM (Month-over-Month):** Represents the percentage or absolute change compared to the previous month.
+**`MoM (Month-over-Month):`** Represents the percentage or absolute change compared to the previous month.
 
-**DTI (Debt-to-Income Ratio):** DTI measures the borrower's debt burden relative to income. It gauges the borrower's capacity to take on additional debt.
+**`DTI (Debt-to-Income Ratio):`** DTI measures the borrower's debt burden relative to income. It gauges the borrower's capacity to take on additional debt.
 
-**Good Loan:** This category includes loans with a loan status of 'Fully Paid' and 'Current.'
+**`Good Loan:`** This category includes loans with a loan status of 'Fully Paid' and 'Current.'
 
-**Bad Loan:** This category specifically includes loans with a loan status of 'Charged Off.'
+**`Bad Loan:`** This category specifically includes loans with a loan status of 'Charged Off.'
 
-**Grade:** Grade represents a risk classification assigned to the loan based on creditworthiness. Higher grades signify lower risk. Sub Grade refines the risk assessment within a grade, providing additional risk differentiation.
+**`Grade:`** Grade represents a risk classification assigned to the loan based on creditworthiness. Higher grades signify lower risk. Sub Grade refines the risk assessment within a grade, providing additional risk differentiation.
 
-**Verification Status:** Verification Status indicates whether the borrower's financial information has been verified. It assesses data accuracy.
+**`Verification Status:`** Verification Status indicates whether the borrower's financial information has been verified. It assesses data accuracy.
 
-**Loan Status:** Loan Status indicates the current state of the loan (e.g., fully paid, current, default). It tracks loan performance.
+**`Loan Status:`** Loan Status indicates the current state of the loan (e.g., fully paid, current, default). It tracks loan performance.
