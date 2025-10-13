@@ -43,6 +43,12 @@ This project implements an end-to-end ELT pipeline for the analysis of loans and
 
 ---
 
+## Dashboard Preview
+
+![Pipeline Architecture](Media/Pipeline-Architecture.jpg)
+
+---
+
 ## Technology Stack
 
 | Layer                | Technology          | Role / Purpose                   |
@@ -61,58 +67,115 @@ This project implements an end-to-end ELT pipeline for the analysis of loans and
 
 ## How to Run
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/nasr1231/Loans-Mortgages-ELT-Pipeline.git
-   cd Loans-Mortgages-ELT-Pipeline
-   ```
+Follow these steps to set up and run the Loans-Mortgages-ELT-Pipeline locally using Docker and Docker Compose. This will provision all required services (PostgreSQL, NiFi, HDFS, Hive, Spark, Airflow, etc.) for development or demonstration.
 
-2. **Start All Services**
-   ```bash
-   docker-compose up -d
-   ```
-   This command will launch all containers for HDFS, YARN, Airflow, Spark, Hive, Zeppelin, and supporting services.
+### Step 1: Clone the Repository
 
-3. **Check Initialization**
-   - Airflow initialization happens via the `airflow-init` service. Wait for this to become healthy before accessing other components.
-   - You can check container health and logs with:
-     ```bash
-     docker ps
-     docker logs <container_name>
-     ```
+```bash
+git clone https://github.com/nasr1231/Loans-Mortgages-ELT-Pipeline.git
+cd Loans-Mortgages-ELT-Pipeline
+```
 
----
+### Step 2: Build and Start Docker Services
 
-## Tools & Web UIs
+```bash
+docker-compose up -d
+```
+This command will:
+- Download required Docker images (if not present)
+- Start containers for all services in the background
 
-| Tool/Service     | UI Port | Default URL                       | Container Name        |
-|------------------|--------:|-----------------------------------|----------------------|
-| Airflow          |   3000  | http://localhost:3000             | ELT_Loan_namenode     |
-| Spark Master     |   8080  | http://localhost:8080             | ELT_Loan_namenode     |
-| Spark Worker     |   8081  | http://localhost:8081             | ELT_Loan_namenode     |
-| Spark Driver     |   4040  | http://localhost:4040             | ELT_Loan_namenode     |
-| Zeppelin         |   8082  | http://localhost:8082             | ELT_Loan_namenode     |
-| HDFS Namenode    |   9870  | http://localhost:9870             | ELT_Loan_namenode     |
-| PostgreSQL       |   5432  | N/A (access via client/psql)      | external_postgres_db  |
-| Airflow Init     |   N/A   | N/A (background setup)            | ELT_Loan_airflow-init |
-| HDFS Datanode    |   N/A   | N/A                               | ELT_Loan_datanode     |
+### Step 3: Service Availability & Initialization
 
----
+- Some services (like Airflow and PostgreSQL) may take extra time to initialize.
+- Check container health and logs:
+  ```bash
+  docker ps
+  ```
+- Wait for the `airflow-init` container to finish initialization before using Airflow UI.
+  ![Docker up](https://github.com/user-attachments/assets/57d5d48e-dcc7-42ce-bdd4-535b41e3dd7e)
 
-## Important Notes
+### Step 4: Access Tool Web UIs
 
-- **Initialization**: The Airflow service is initialized via the `airflow-init` container. Do not access Airflow UI until this process is complete.
-- **Dependencies**: Several services depend on the external PostgreSQL service and must wait until it is ready. Health checks ensure proper boot order.
-- **Persistent Data**: Hadoop, Airflow, Spark, and Zeppelin data are persisted via Docker volumes; container restarts will not lose pipeline state.
-- **Configuration Files**: Custom configs (for Hive, Zeppelin, Flume, Airflow, etc.) are mapped via Docker volumes from the local `configs/` directory.
-- **Default Credentials**: Airflow admin user is created with username `admin` and password `admin`. Change these for production deployments.
-- **Resource Use**: Running all services may require substantial RAM and CPU. Adjust Docker resource limits as needed.
-- **Service Ports**: If you have other local services using these ports, you may need to change the mappings in `docker-compose.yaml`.
-- **Logs & Debugging**: Use `docker logs <container_name>` and the respective web UIs for monitoring and troubleshooting errors.
+| Tool/Service  | Default Port | URL                    | Default Credentials           | Notes                    |
+|---------------|-------------|------------------------|------------------------------|--------------------------|
+| Airflow       |    3000     | http://localhost:3000  | Username: `admin`<br>Password: `admin` | Workflow orchestration   |
+| NiFi          |    8085     | http://localhost:8085  | N/A      | Data ingestion flow      |
+| Spark Master  |    8080     | http://localhost:8080  | N/A                          | Spark cluster mgmt       |
+| Spark Worker  |    8081     | http://localhost:8081  | N/A                          | Spark node status        |
+| Zeppelin      |    8082     | http://localhost:8082  | Username: `admin`<br>Password: `admin` (if configured) | Data visualization       |
+| HDFS NameNode |    9870     | http://localhost:9870  | N/A                          | HDFS status, browse      |
+| PgAdmin    |    5000     | http://localhost:5000  | Username: `pgadmin@admin.com`<br>Password: `admin` | Navigating PostgreSQL DB |
+| Metabase |    3001     | http://localhost:3001  | Create Your Own Account    | Data Visualizations |
+| PostgreSQL    |    5432     | N/A (use psql/client)  | Username: `user`<br>Password: `user1234` | Used for storing source data |
 
----
 
+### Additional: Stop the Project
+
+To stop all containers without removing data:
+```bash
+docker-compose down
+```
+- to reset the project and delete volumes
+```bash
+docker-compose down -v
+```
+
+**For more details:**  
 > **See the full [docker-compose.yaml](https://github.com/nasr1231/Loans-Mortgages-ELT-Pipeline/blob/main/docker-compose.yaml) for complete details on service configuration.**
+---
+
+## Data Ingestion: From Relational Database to HDFS
+
+The initial phase of the pipeline ingests raw data from the PostgreSQL relational database and stages it in HDFS as columnar Parquet files, optimizing storage and downstream analytics.
+
+![NiFi Ingestion](Media/NiFi%20Data%20Ingestion.png)
+
+> **You can upload the NiFi Ingestion Templates by downloading this XML [Template](scripts/Data_Ingestion.xml) and import it into NiFi, then configure the credentials for each processor.**
+
+---
+
+## Configuring the HDFS Staging Layer
+
+Before ingesting data, you need to set up the HDFS directory structure for the pipeline. The **staging layer** is where raw data (Parquet files) is first landed in HDFS for further processing.
+
+### Step-by-Step Setup
+
+1. **Access the Hadoop Shell**
+
+   Open a bash shell in the NameNode container:
+   ```bash
+   docker exec -it ELT_Loan_namenode bash
+   ```
+
+2. **Create the Staging Layer Directory**
+
+   In the container shell, run:
+   ```bash
+   hdfs dfs -mkdir -p /staging_layer
+   ```
+   
+3. **Set Permissions (Optional but Recommended)**
+
+   Ensure read/write access for required services:
+   ```bash
+   hdfs dfs -chmod -R 755 /staging_layer
+   ```
+
+4. **Verify Directory Creation**
+
+   List the contents to confirm:
+   ```bash
+   hdfs dfs -ls /
+   hdfs dfs -ls /staging_layer
+   ```
+
+### Notes
+
+- The `/staging_layer` directory will be the destination for Parquet files written by NiFi during ingestion.
+- This setup only needs to be performed once when initializing the environment.
+
+---
 
 ## Data Modeling: Fact and Dimension Tables
 
@@ -212,4 +275,4 @@ erDiagram
 
 ---
 
-> For full DDLs, see: [Hive Data Warehouse DDL Script](scripts/Hive-DWH-DDL.sql)  
+> To Understand more about the Data Model and DDL Script, see: [Hive Data Warehouse DDL Script](scripts/Hive-DWH-DDL.sql)  
