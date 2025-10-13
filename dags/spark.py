@@ -1,8 +1,9 @@
 
+
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, year, month, date_format, regexp_replace, trim, monotonically_increasing_id, udf, when, concat_ws, lit, to_date
+from pyspark.sql.functions import col, year, month, date_format, regexp_replace, trim, monotonically_increasing_id, udf, when, concat_ws, lit, current_timestamp
 from pyspark.sql import functions as F
-from pyspark.sql.types import StringType, IntegerType
+from pyspark.sql.types import StringType, IntegerType, DecimalType
 from datetime import datetime, timedelta
 
 
@@ -81,7 +82,6 @@ state_dict = {
     "DC": "District of Columbia"
 }
 
-
 # Create a UDF to map codes to full names
 code_to_name_udf = udf(lambda code: state_dict.get(code, "Unknown"), StringType())
 
@@ -99,32 +99,33 @@ financial_df= financial_df.fillna({"emp_title": "Unknown"})
     
 dim_borrowers = financial_df.select(
     col("member_id").alias("borrowers_id_bk"),   # Business Key
-    col("emp_title").alias("employment_title"),
+    col("emp_title"),
     col("emp_length").alias("employment_length"),
-    col("annual_income"),
+    col("annual_income").cast(DecimalType(12, 2)),
     col("home_ownership"),
     col("address_state").alias("state_code"),
     col("total_acc").alias("total_account"),
     col("verification_status"),
     col("application_type")
 ).dropDuplicates(["borrowers_id_bk"]) \
- .withColumn("borrowers_id_sk", monotonically_increasing_id() + 1)
+ .withColumn("borrowers_id_sk", monotonically_increasing_id() + 1) \
+ .withColumn("insert_date", current_timestamp())
 
 dim_borrowers = dim_borrowers.select(
     "borrowers_id_sk",
     "borrowers_id_bk",
-    "employment_title",
+    "emp_title",
     "employment_length",
     "annual_income",
     "home_ownership",
     "state_code",
     "total_account",
     "verification_status",
-    "application_type"  
+    "application_type",
+    "insert_date"  
 )
 
-## Status Dimension Mapping FKs and BKs, Generating Surrogate Keys
-
+# Status Dimension Mapping FKs and BKs, Generating Surrogate Keys
 dim_status = financial_df.select(
     col("loan_status")
 ).dropDuplicates(["loan_status"]) \
@@ -135,12 +136,14 @@ dim_status = dim_status.withColumn(
     "loan_status_category",
     when(col("loan_status").isin("Fully Paid", "Current"), "Good")
     .otherwise("Bad")
-)
+) \
+    .withColumn("insert_date", current_timestamp())
 
 dim_status = dim_status.select(
     "loan_status",
     "status_id_sk",
-    "loan_status_category"
+    "loan_status_category",
+    "insert_date"  
 )
 
 ## Credit Grade Dimension Mapping FKs and BKs, Generating Surrogate Keys
@@ -148,24 +151,28 @@ dim_credit_grade = financial_df.select(
     col("grade"),
     col("sub_grade")
 ).dropDuplicates(["sub_grade"]) \
- .withColumn("credit_grade_sk", monotonically_increasing_id() + 1)
+ .withColumn("credit_grade_sk", monotonically_increasing_id() + 1) \
+ .withColumn("insert_date", current_timestamp())
 
 dim_credit_grade = dim_credit_grade.select(
     "credit_grade_sk",
     "grade",
-    "sub_grade"
+    "sub_grade",
+    "insert_date"  
 )
 
 ## Loan Terms Dimension Mapping FKs and BKs, Generating Surrogate Keys
 dim_loan_term = financial_df.select(
     col("term").alias("period")
 ).dropDuplicates(["period"]) \
- .withColumn("loan_term_sk", monotonically_increasing_id() + 1)
+ .withColumn("loan_term_sk", monotonically_increasing_id() + 1) \
+ .withColumn("insert_date", current_timestamp())
 
 # Add Loan Term Description Column
 dim_loan_term = dim_loan_term.select(
     "loan_term_sk",
-    "period"
+    "period",    
+    "insert_date"  
 ).withColumn(
     "term_description",
     concat_ws(" ", col("period"), lit("months"))
@@ -179,37 +186,47 @@ date_list = [(start_date + timedelta(days=x),) for x in range((end_date - start_
 
 df_dates = spark.createDataFrame(date_list, ["Date"])
 
+df_dates = df_dates.withColumn("Date", F.to_date(col("Date")))
+
 # Add Date_key in YYYYMMDD format
 df_dates = df_dates.withColumn("Date_key", F.date_format(col("Date"), "yyyyMMdd").cast(IntegerType()))
 
 # Extract Year, Month, Month_name, Quarter
-df_dates = df_dates.withColumn("Year", year(col("Date"))) \
+df_dates = df_dates.withColumn("Date_key", F.date_format(col("Date"), "yyyyMMdd").cast(IntegerType())) \
+                   .withColumn("Year", year(col("Date"))) \
                    .withColumn("Month", month(col("Date"))) \
                    .withColumn("Month_name", date_format(col("Date"), "MMMM")) \
-                   .withColumn("Quarter", F.quarter(col("Date")))
+                   .withColumn("Quarter", F.quarter(col("Date"))) \
+                   .withColumn("insert_date", current_timestamp())
 
 # Reorder columns
-df_dates = df_dates.select("Date_key", "Date", "Year", "Month", "Month_name", "Quarter")
-
+df_dates = df_dates.select(
+    col("Date_key").alias("date_key"),
+    col("Date"),
+    col("Year").alias("year"),
+    col("Month").alias("month"),
+    col("Month_name").alias("month_name"),
+    col("Quarter").alias("quarter"),
+    col("insert_date")
+)
 
 fact_loan_wip = financial_df \
-    .join(df_dates.alias("d_issue"), col("issue_date_dt") == col("d_issue.Date"), "left") \
-    .join(df_dates.alias("d_last_pay"), col("last_payment_date_dt") == col("d_last_pay.Date"), "left") \
-    .join(df_dates.alias("d_next_pay"), col("next_payment_date_dt") == col("d_next_pay.Date"), "left") \
-    .join(df_dates.alias("d_credit_pull"), col("last_credit_pull_date_dt") == col("d_credit_pull.Date"), "left")
+    .join(df_dates.alias("d_issue"), col("issue_date") == col("d_issue.Date"), "left") \
+    .join(df_dates.alias("d_last_pay"), col("last_payment_date") == col("d_last_pay.Date"), "left") \
+    .join(df_dates.alias("d_next_pay"), col("next_payment_date") == col("d_next_pay.Date"), "left") \
+    .join(df_dates.alias("d_credit_pull"), col("last_credit_pull_date") == col("d_credit_pull.Date"), "left")
 
 fact_loan_wip = fact_loan_wip \
     .join(dim_borrowers, fact_loan_wip.member_id == dim_borrowers.borrowers_id_bk, "left") \
-    .join(dim_status, fact_loan_wip.loan_status == dim_status.status_id, "left") \
+    .join(dim_status, fact_loan_wip.loan_status == dim_status.loan_status, "left") \
     .join(dim_credit_grade, fact_loan_wip.sub_grade == dim_credit_grade.sub_grade, "left") \
     .join(dim_loan_term, fact_loan_wip.term == dim_loan_term.period, "left")
-
 
 fact_loan = fact_loan_wip.select(
     # Business Key
     col("id").alias("loan_id_bk"),
     
-    # Foreign Keys from Dimension Tables
+    # Foreign Keys
     col("borrowers_id_sk").alias("borrowers_id_fk"),
     col("status_id_sk").alias("status_id_fk"),
     col("credit_grade_sk").alias("credit_grade_fk"),
@@ -220,40 +237,41 @@ fact_loan = fact_loan_wip.select(
     col("d_credit_pull.Date_key").alias("last_credit_pull_date"),
     
     # Measures
-    col("loan_amount"),
-    col("dti").alias("DTI"),
-    col("installment"),
-    col("int_rate").alias("interest_rate"),
-    col("total_payment"),
-    col("purpose").alias("loan_purpose")
-).withColumn("loan_id_pk_sk", monotonically_increasing_id() + 1)
-
+    col("loan_amount").cast(DecimalType(6, 2)),
+    col("dti").cast(DecimalType(6, 5)),
+    col("installment").cast(DecimalType(10, 2)),
+    col("int_rate").cast(DecimalType(5, 2)).alias("interest_rate"),
+    col("total_payment").cast(DecimalType(10, 2)),
+    col("purpose")
+).withColumn("loan_id_pk_sk", monotonically_increasing_id() + 1) \
+ .withColumn("insert_date", current_timestamp())    
 
 fact_loan = fact_loan.select(
     "loan_id_pk_sk",
     "loan_id_bk",
-    "borrowers_id_fk",
     "status_id_fk",
-    "credit_grade_fk",
-    "loan_term_fk",
+    "borrowers_id_fk",
     "date_key_issue",
     "date_key_last_payment",
     "date_key_next_payment",
     "last_credit_pull_date",
+    "credit_grade_fk",
+    "loan_term_fk",
     "loan_amount",
-    "DTI",
+    "dti",
     "installment",
     "interest_rate",
     "total_payment",
-    "loan_purpose"
-)
+    "purpose",
+    "insert_date"
+)   
 
 spark.sql("USE default")
 
 # Overwrite Hive tables Data to its Location automatically
-dim_borrowers.write.mode("overwrite").insertInto("Dim_Borrowers", overwrite=True)
-dim_credit_grade.write.mode("overwrite").insertInto("Dim_Credit_Grade", overwrite=True)
-dim_status.write.mode("overwrite").insertInto("Dim_Status", overwrite=True)
-dim_loan_term.write.mode("overwrite").insertInto("Dim_Loan_Term", overwrite=True)
-df_dates.write.mode("overwrite").insertInto("Dim_Date", overwrite=True)
-fact_loan.write.mode("overwrite").insertInto("Fact_Loan", overwrite=True)
+dim_borrowers.write.mode("overwrite").orc("/dwh_financial_loans/external/Dim_Borrowers")
+dim_credit_grade.write.mode("overwrite").orc("/dwh_financial_loans/external/Dim_Credit_Grade")
+dim_status.write.mode("overwrite").orc("/dwh_financial_loans/external/Dim_Status")
+dim_loan_term.write.mode("overwrite").orc("/dwh_financial_loans/external/Dim_Loan_Term")
+df_dates.write.mode("overwrite").orc("/dwh_financial_loans/external/Dim_Date")
+fact_loan.write.mode("overwrite").orc("/dwh_financial_loans/external/Fact_Loan")
