@@ -1,8 +1,8 @@
 -- Create Database
-CREATE DATABASE IF NOT EXISTS Loans_DWH
-LOCATION '/dwh_financial_loans/external/Loans_DWH';
+-- CREATE DATABASE IF NOT EXISTS Loans_DWH
+-- LOCATION '/dwh_financial_loans/external/Loans_DWH';
 
-USE Loans_DWH;
+USE DEFAULT;
 
 /* Create Borrower Dimension Table */
 CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Borrowers (
@@ -18,7 +18,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Borrowers (
     Application_type STRING,
     insert_date TIMESTAMP
 )
-STORED AS PARQUET
+STORED AS ORC
 LOCATION '/dwh_financial_loans/external/Dim_Borrowers';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Credit_Grade (
@@ -27,7 +27,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Credit_Grade (
     Sub_grade STRING,
     insert_date TIMESTAMP
 )
-STORED AS PARQUET
+STORED AS ORC
 LOCATION '/dwh_financial_loans/external/Dim_Credit_Grade';
 
 
@@ -35,36 +35,35 @@ LOCATION '/dwh_financial_loans/external/Dim_Credit_Grade';
 CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Loan_Term (
     Loan_Term_sk BIGINT,
     Period STRING,
-    Term_description STRING,
-    insert_date TIMESTAMP
+    insert_date TIMESTAMP,
+    Term_description STRING
 )
-STORED AS PARQUET
+STORED AS ORC
 LOCATION '/dwh_financial_loans/external/Dim_Loan_Term';
 
 
 /* Create Status Dimension Table */
 CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Status (
-    Status_id_sk BIGINT,
-    Status_id BIGINT,
-    Loan_status STRING,
-    Loan_status_category STRING,
+    loan_status STRING,
+    status_id_sk BIGINT,
+    loan_status_category STRING,
     insert_date TIMESTAMP
 )
-STORED AS PARQUET
+STORED AS ORC
 LOCATION '/dwh_financial_loans/external/Dim_Status';
 
 
 /* Create Date Dimension Table */
 CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Date (
-    Date_key BIGINT,
-    `Date` DATE,
-    Year INT,
-    Month INT,
-    Month_name STRING,
-    Quarter INT,
+    date_key BIGINT,
+    `date` DATE,
+    year INT,
+    month INT,
+    month_name STRING,
+    quarter INT,
     insert_date TIMESTAMP
 )
-STORED AS PARQUET
+STORED AS ORC
 LOCATION '/dwh_financial_loans/external/Dim_Date';
 
 
@@ -77,16 +76,16 @@ CREATE EXTERNAL TABLE IF NOT EXISTS Fact_Loan (
     Date_key_issue BIGINT,
     Date_key_last_payment BIGINT,
     Date_key_next_payment BIGINT,
-    Last_credit_pull_date BIGINT,
+    last_credit_pull_date BIGINT,
     Credit_grade_fk BIGINT,
     Loan_Term_fk BIGINT,
-    Loan_amount INT,
-    DTI DECIMAL(6,5),
-    Installment DECIMAL(12,2),
-    Interest_rate DECIMAL(6,5),
-    Total_payment INT,
-    Purpose STRING,
+    Loan_amount DECIMAL(6,2),
+    dti DECIMAL(6,5),
+    Installment DECIMAL(10,2),
+    Interest_rate DECIMAL(5,2),
+    Total_payment DECIMAL(10,2),
+    purpose STRING,
     insert_date TIMESTAMP
 )
-STORED AS PARQUET
+STORED AS ORC
 LOCATION '/dwh_financial_loans/external/Fact_Loan';
