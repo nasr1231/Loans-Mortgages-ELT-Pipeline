@@ -515,7 +515,7 @@ def Loans_ELT_Pipeline():
 Loans_ELT_Pipeline()
 ```
 
-## 11-Explanation of Terms Used in the Report
+## 10-Explanation of Terms Used in the Report
 
 **MTD (Month-to-Date):** Refers to the cumulative total for the current month up to the current date.
 
