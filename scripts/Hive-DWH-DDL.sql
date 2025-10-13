@@ -56,7 +56,7 @@ LOCATION '/dwh_financial_loans/external/Dim_Status';
 /* Create Date Dimension Table */
 CREATE EXTERNAL TABLE IF NOT EXISTS Dim_Date (
     date_key BIGINT,
-    `date` DATE,
+    `Date` DATE,
     year INT,
     month INT,
     month_name STRING,
