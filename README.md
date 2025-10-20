@@ -59,7 +59,7 @@ This project implements an end-to-end ELT pipeline for the analysis of loans and
 | Data Warehouse       | Apache Hive        | Structured storage, SQL queries  |
 | Orchestration        | Apache Airflow     | Workflow scheduling and monitoring|
 | Containerization     | Docker             | Environment isolation            |
-| Visualizations       | Metabase           | Visualizing Data Into Useful Insights            |
+| Visualizations       | Power BI           | Visualizing Data Into Useful Insights            |
 
 ---
 
@@ -105,7 +105,6 @@ This command will:
 | Zeppelin      |    8082     | http://localhost:8082  | Username: `admin`<br>Password: `admin` (if configured) | Data visualization       |
 | HDFS NameNode |    9870     | http://localhost:9870  | N/A                          | HDFS status, browse      |
 | PgAdmin    |    5000     | http://localhost:5000  | Username: `pgadmin@admin.com`<br>Password: `admin` | Navigating PostgreSQL DB |
-| Metabase |    3001     | http://localhost:3001  | Create Your Own Account    | Data Visualizations |
 | PostgreSQL    |    5432     | N/A (use psql/client)  | Username: `user`<br>Password: `user1234` | Used for storing source data |
 
 
@@ -199,8 +198,6 @@ After ingesting raw data into the HDFS staging layer, the next step in the pipel
       - `dim_status`  
       - `dim_Credit_grade`  
       - `dim_Date`
-
-![Data Model](Media/Data%20Model.png)
 
 ### Typical Workflow Example
 
