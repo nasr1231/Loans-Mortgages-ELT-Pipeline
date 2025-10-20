@@ -42,7 +42,9 @@ This project implements an end-to-end ELT pipeline for the analysis of loans and
 
 ## 3-Dashboard Preview
 
-![Pipeline Architecture](Media/Pipeline-Architecture.jpg)
+![Pipeline Architecture](Media/Dashboard_page-0001.jpg)
+![Pipeline Architecture](Media/Dashboard_page-0002.jpg)
+![Pipeline Architecture](Media/Dashboard_page-0003.jpg)
 
 ---
 
